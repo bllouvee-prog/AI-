@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#030706">
+<title>AI 음성 판별기</title>
+<style>
+:root{
+  --bg:#030706;        /* 바탕: 검정 */
+  --g:#19f5a6;         /* 포인트: 네온 민트 */
+  --ink:#fff;
+  --muted:#b4c2bd;
+  --line:rgba(25,245,166,.38);
+  --danger:#ff6b78;    /* 경고·강조 */
+  --panel:rgba(9,15,13,.84);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;background:var(--bg);color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--ink);position:relative;min-height:100vh;overflow-x:hidden;
+  font:20px/1.65 "Pretendard","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;word-break:keep-all}
+
+/* 배경 장식 (네온 알약·원) */
+.deco{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.deco i{position:absolute;display:block}
+.pill{border-radius:99px;background:linear-gradient(90deg,#0bd488,#5dffc3);box-shadow:0 0 36px rgba(25,245,166,.65)}
+.p1{width:230px;height:40px;right:-120px;top:64px;transform:rotate(30deg)}
+.p2{width:200px;height:34px;left:-130px;top:62%;transform:rotate(-32deg)}
+.orb{width:440px;height:440px;border-radius:50%;right:-270px;bottom:-140px;background:radial-gradient(circle at 40% 40%,rgba(25,245,166,.85),rgba(25,245,166,.16) 55%,transparent 70%)}
+.ring{border:1px solid rgba(255,255,255,.5);border-radius:50%}
+.r1{width:340px;height:340px;right:-200px;top:30%}
+.r2{width:92px;height:92px;left:-34px;top:15%;border-color:rgba(25,245,166,.85)}
+.r3{width:16px;height:16px;right:26px;top:22%;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 12px var(--g)}
+
+.top{position:relative;z-index:2;max-width:1100px;margin:0 auto;padding:14px 12px 6px;display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800}
+.logo-dot{width:18px;height:18px;border-radius:50%;background:var(--g);box-shadow:0 0 14px var(--g)}
+main{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:8px 8px 24px}
+@media(min-width:768px){main{padding:16px 16px 32px}}
+
+h1,h2,h3{font-weight:800;line-height:1.3;margin:0 0 .6em;letter-spacing:-.01em}
+h1{font-size:35px} h2{font-size:28px} h3{font-size:22px}
+.eyebrow{color:var(--g);font-weight:700;font-size:18px;margin:0 0 6px}
+.center-title{text-align:center;margin:34px 0 14px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:22px 18px;margin:0 0 14px;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.cards{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 14px}
+.cards .card{margin:0}
+@media(min-width:768px){.cards{grid-template-columns:repeat(3,1fr)}}
+
+.hero{text-align:center;background:transparent;border:0;padding:30px 6px 10px;-webkit-backdrop-filter:none;backdrop-filter:none}
+.hero h1{font-size:40px;margin:.1em 0 .5em;background:linear-gradient(180deg,#fff 35%,var(--g));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 14px rgba(25,245,166,.45))}
+.hero p{max-width:34em;margin-left:auto;margin-right:auto;color:var(--muted)}
+.wave{width:100%;max-width:360px;height:90px;display:block;margin:6px auto 14px;filter:drop-shadow(0 0 8px rgba(25,245,166,.7))}
+
+button{display:block;width:100%;min-height:52px;margin:12px 0 0;padding:12px 22px;border:0;border-radius:999px;
+  background:linear-gradient(90deg,#19f5a6,#4dffc0);color:#02130d;font:inherit;font-weight:800;text-align:center;cursor:pointer;box-shadow:0 0 22px rgba(25,245,166,.35)}
+button:hover{filter:brightness(1.08)}
+button.sub{background:transparent;color:#fff;border:1.5px solid var(--g);box-shadow:none}
+button.dark{background:#000;color:#fff;box-shadow:none}
+button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+@media(min-width:768px){button{max-width:420px}.hero button,.band button{margin-left:auto;margin-right:auto}}
+:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+.note{font-size:17px;color:var(--muted)}
+.accent{color:var(--danger);font-weight:700}
+.warn{border-left:5px solid var(--danger);padding-left:12px}
+.card.warn{padding-left:18px;border-color:rgba(255,107,120,.55);border-left:5px solid var(--danger)}
+.note b,.card b{color:#fff}
+ul{padding-left:22px;margin:.4em 0} li{margin:.35em 0} li::marker{color:var(--g)}
+
+.steps{display:grid;grid-template-columns:1fr;gap:14px;margin:0 0 14px}
+@media(min-width:768px){.steps{grid-template-columns:repeat(3,1fr)}}
+.step{text-align:center}
+.step svg{width:46px;height:46px;stroke:var(--g);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;margin-bottom:6px;filter:drop-shadow(0 0 6px rgba(25,245,166,.6))}
+.step h3{font-size:21px;margin-bottom:.3em}
+.step p{margin:0;font-size:17px;color:var(--muted)}
+
+.band{margin:30px 0 14px;padding:34px 18px;border-radius:26px;text-align:center;background:linear-gradient(180deg,#19f5a6,#00d98f);color:#02130d}
+.band h2{color:#02130d;margin:0 0 6px;font-size:26px}
+.band p{margin:0 0 4px;color:#04281c;font-size:18px}
+
+.bar{height:20px;background:#0b1512;border:1px solid var(--line);border-radius:99px;overflow:hidden;margin:14px 0}
+.bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00c98a,#19f5a6);box-shadow:0 0 14px var(--g);transition:width .4s}
+.big{font-size:56px;font-weight:800;line-height:1.1;margin:.15em 0;color:var(--g);text-shadow:0 0 24px rgba(25,245,166,.5)}
+
+input[type=file]{width:100%;font:inherit;color:#fff;padding:14px;border:2px dashed var(--g);border-radius:16px;background:rgba(25,245,166,.06);min-height:56px}
+input[type=file]::file-selector-button{margin-right:12px;padding:10px 18px;border:0;border-radius:99px;background:var(--g);color:#02130d;font:inherit;font-weight:800;cursor:pointer}
+label.chk{display:flex;gap:12px;align-items:flex-start;margin-top:14px}
+label.chk input{width:28px;height:28px;flex:none;margin-top:4px;accent-color:var(--g)}
+
+.gwrap{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000;margin:6px 0 14px}
+.gwrap canvas{display:block;width:100%}
+#c-wave{height:140px} #c-spec{height:200px}
+.mk{position:absolute;top:0;bottom:0;width:0;border-left:3px dashed var(--danger)}
+
+.recs{list-style:none;padding:0;margin:.6em 0}
+.rec{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:17px}
+.rec button{width:auto;margin:0;min-height:44px;padding:8px 18px}
+footer{position:relative;z-index:1;text-align:center;font-size:15px;color:#8fa39b;padding:6px 12px 40px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="deco" aria-hidden="true">
+  <i class="pill p1"></i><i class="pill p2"></i><i class="orb"></i>
+  <i class="ring r1"></i><i class="ring r2"></i><i class="r3"></i>
+</div>
+<header class="top"><span class="logo-dot" aria-hidden="true"></span>AI 음성 판별기</header>
+<main>
+
+<!-- 1. 홈 -->
+<section id="s-home">
+  <div class="card hero">
+    <p class="eyebrow">AI VOICE CHECK</p>
+    <svg class="wave" viewBox="0 0 300 90" role="img" aria-label="음성 파형 그림">
+      <g fill="#19f5a6"><rect x="10" y="40" width="8" height="10" rx="4"/><rect x="30" y="28" width="8" height="34" rx="4"/><rect x="50" y="14" width="8" height="62" rx="4"/><rect x="70" y="30" width="8" height="30" rx="4"/><rect x="90" y="8" width="8" height="74" rx="4"/><rect x="110" y="26" width="8" height="38" rx="4"/><rect x="130" y="36" width="8" height="18" rx="4"/><rect x="150" y="12" width="8" height="66" rx="4"/><rect x="170" y="30" width="8" height="30" rx="4"/><rect x="190" y="18" width="8" height="54" rx="4"/><rect x="210" y="34" width="8" height="22" rx="4"/><rect x="230" y="10" width="8" height="70" rx="4"/><rect x="250" y="28" width="8" height="34" rx="4"/><rect x="270" y="40" width="8" height="10" rx="4"/></g>
+    </svg>
+    <h1>AI 음성 판별기</h1>
+    <p>AI로 만든 목소리가 보이스피싱 같은 범죄에 쓰이고 있습니다. 의심되는 음성 파일을 올리면, AI 모델이 사람 목소리와 합성 목소리 중 어느 쪽에 가까운지 점수로 알려 드립니다.</p>
+    <button id="btn-start">시작하기</button>
+  </div>
+
+  <div class="center-title"><p class="eyebrow">사용 방법</p><h2>세 단계로 확인해요</h2></div>
+  <div class="steps">
+    <div class="card step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 33V10M15 19l9-9 9 9M8 30v8h32v-8"/></svg>
+      <h3>음성 파일 올리기</h3><p>의심되는 음성 파일을 선택합니다.</p>
+    </div>
+    <div class="card step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M8 28v8M16 18v18M24 10v26M32 20v16M40 26v10"/></svg>
+      <h3>소리 그래프와 AI 점수</h3><p>파형·스펙트로그램을 그리고, AI 모델이 점수를 계산합니다.</p>
+    </div>
+    <div class="card step">
+      <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16"/><path d="M24 24l8-8M24 8v4M8 24h4M40 24h-4"/></svg>
+      <h3>가능성과 대처 방법</h3><p>합성 가능성을 퍼센트로 보고, 보이스피싱 예방 방법을 확인합니다.</p>
+    </div>
+  </div>
+
+  <div class="card" id="saved-box" hidden>
+    <h3>저장한 결과</h3>
+    <p class="note" id="saved-status"></p>
+    <ul id="history" class="recs"></ul>
+    <p class="note" id="saved-empty" hidden>저장한 결과가 아직 없습니다.</p>
+    <p class="note accent" id="saved-msg" aria-live="polite"></p>
+    <p class="note">결과 숫자만 저장되며 음성 파일과 파일 이름은 저장하지 않습니다. 이름·이메일 없는 익명 로그인으로 연결되어, 이 브라우저의 로그인 정보가 지워지면 이 기록에 다시 접근할 수 없습니다.</p>
+    <button class="sub" id="btn-toggle">저장 허용 끄기</button>
+    <button class="sub" id="btn-clear">저장 기록 모두 지우기</button>
+  </div>
+
+  <div class="band">
+    <h2>의심되는 목소리, 먼저 확인해 보세요</h2>
+    <p>결과는 정확하지 않을 수 있어요. 참고용으로만 사용해 주세요.</p>
+    <button class="dark" id="btn-start2">시작하기</button>
+  </div>
+</section>
+
+<!-- 안내 동의 -->
+<section id="s-notice" hidden>
+  <div class="card warn">
+    <h2>사용 전에 꼭 읽어 주세요</h2>
+    <ul>
+      <li>결과는 <span class="accent">정확하지 않을 수 있습니다.</span> 이 결과만 믿고 사람을 의심하거나 판단하지 마세요.</li>
+      <li><span class="accent">이 모델은 영어 음성 데이터로 학습되었습니다.</span> 한국어 음성에서는 성능이 검증되지 않았고 틀릴 가능성이 큽니다.</li>
+      <li>최신 AI 음성(타입캐스트 등)에서도 틀릴 수 있습니다. 시연용이며 성능은 따로 검증되지 않았습니다.</li>
+      <li>실제 통화 감시나 범죄 예방을 보장하지 않습니다.</li>
+    </ul>
+    <label class="chk"><input type="checkbox" id="agree"><span>위 내용을 읽었고, 결과를 무조건 믿지 않겠습니다.</span></label>
+    <label class="chk"><input type="checkbox" id="allowSave"><span>(선택) 분석 결과 숫자를 저장하도록 허용합니다. 음성 파일과 파일 이름은 저장하지 않으며, 이름·이메일 없이 익명 로그인으로 저장됩니다.</span></label>
+    <button id="btn-agree" disabled>동의하고 계속하기</button>
+    <p id="notice-msg" class="note accent" aria-live="polite"></p>
+    <button class="sub" id="btn-skipsave" hidden>저장 없이 계속하기</button>
+    <button class="sub" data-back>뒤로 가기</button>
+  </div>
+</section>
+
+<!-- 2. 업로드 -->
+<section id="s-upload" hidden>
+  <div class="card">
+    <h2>음성 파일 올리기</h2>
+    <input type="file" id="file" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg" aria-label="음성 파일 선택">
+    <p id="file-info" class="note" aria-live="polite">선택된 파일이 없습니다.</p>
+    <button id="btn-analyze">분석 시작</button>
+    <button class="sub" data-back>뒤로 가기</button>
+    <p class="note">파일 조건: wav, mp3, m4a, flac, ogg · 최대 10MB · 1초 이상. 긴 파일은 <b>앞부분 약 4초만</b> 분석됩니다.</p>
+    <p class="note warn"><b>영어 음성 기준 모델입니다.</b> 한국어 음성은 정확하게 판별되지 않을 수 있습니다.</p>
+    <p class="note">결과가 정확하지 않을 수 있습니다.</p>
+    <p class="note accent">개인정보(이름, 주소, 계좌, 주민번호 등)가 들어 있는 음성은 올리지 마세요. 파일은 분석을 위해 외부 서버(Hugging Face)로 전송됩니다.</p>
+  </div>
+</section>
+
+<!-- 3. 분석 중 -->
+<section id="s-loading" hidden>
+  <div class="card">
+    <h2>AI가 분석하고 있습니다</h2>
+    <p>예상 소요 시간: 약 10~40초. 서버가 잠들어 있었다면 1분 이상 걸릴 수 있습니다.</p>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar"><i id="bar-i"></i></div>
+    <p id="pct" class="note" aria-live="polite">0% (예상 진행률)</p>
+    <button class="sub" id="btn-cancel">분석 취소 (홈으로)</button>
+  </div>
+</section>
+
+<!-- 4. 결과 -->
+<section id="s-result" hidden>
+  <div class="cards">
+    <div class="card">
+      <h3>AI 합성 음성일 가능성</h3>
+      <p class="big" id="r-pct">0%</p>
+      <p id="r-label" class="accent"></p>
+      <p class="note" id="r-ainote"></p>
+      <button class="sub" id="btn-retry-ai" hidden>AI 분석 다시 시도</button>
+    </div>
+    <div class="card">
+      <h3>분석 정보</h3>
+      <ul id="r-reasons"></ul>
+    </div>
+    <div class="card" id="r-guide">
+      <h3>대처 방법</h3>
+      <ul id="r-guide-list"></ul>
+    </div>
+  </div>
+  <div class="card" id="r-graphs" hidden>
+    <h3>소리 그래프 (AI 없이 이 기기에서 그린 것)</h3>
+    <p class="note"><b>파형</b>: 시간에 따른 소리 크기입니다. 가로는 시간, 세로는 크기이며 보기 쉽게 크기를 맞춰 그렸습니다.</p>
+    <div class="gwrap"><canvas id="c-wave" role="img" aria-label="음성 파형 그래프"></canvas><i class="mk" id="mk1"></i></div>
+    <p class="note"><b>스펙트로그램</b>: 소리를 주파수별로 나눈 그림입니다. 가로는 시간, 세로는 <span id="g-hz">0~8kHz</span>(위쪽이 높은 소리), 밝을수록 강한 소리입니다.</p>
+    <div class="gwrap"><canvas id="c-spec" role="img" aria-label="음성 스펙트로그램"></canvas><i class="mk" id="mk2"></i></div>
+    <p class="note" id="g-mark">빨간 점선: AI 모델이 분석하는 구간의 끝(약 4초). 그래프에는 파일의 앞 12초까지만 그립니다.</p>
+  </div>
+  <div class="card" id="save-box" hidden>
+    <p>이 결과를 이 기기에 저장할까요?</p>
+    <button id="btn-save">저장하기</button>
+    <button class="sub" id="btn-nosave">저장하지 않기</button>
+  </div>
+  <p id="save-msg" class="note" aria-live="polite"></p>
+  <button id="btn-again">다른 파일 분석하기</button>
+</section>
+
+<!-- 5. 오류 -->
+<section id="s-error" hidden>
+  <div class="card warn">
+    <h2>오류가 발생했습니다</h2>
+    <p>오류 이름: <span class="accent" id="e-name"></span></p>
+    <p id="e-msg"></p>
+    <p>잠시 후 다시 시도해 주세요.</p>
+    <button id="btn-retry">파일 올리는 화면으로 돌아가기</button>
+  </div>
+</section>
+
+</main>
+<footer>제1회 호연고 해커톤 · 1모둠 · 시연용 프로젝트 · 결과는 정확하지 않을 수 있습니다</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(function(){
+"use strict";
+var SPACE = "https://bllouvee-hoyeon-ai-voice-demo.hf.space"; // 연결된 Hugging Face Space
+var MAX_MB = 10;
+var $ = function(id){return document.getElementById(id)};
+var screens = ["home","notice","upload","loading","result","error"];
+var lastStep = "", stack = ["home"], runId = 0, timer = null, allowSave = false, lastRecord = null;
+
+function show(name, push){
+  screens.forEach(function(s){$("s-"+s).hidden = (s!==name)});
+  if(push) stack.push(name);
+  window.scrollTo(0,0);
+}
+function back(){ if(stack.length>1) stack.pop(); show(stack[stack.length-1]); }
+function goHome(){ stack=["home"]; show("home"); loadSaved(); }
+
+/* ---- Supabase (publishable 키만 사용. service_role/secret 키는 절대 넣지 않습니다) ---- */
+var SUPABASE_URL="https://gpyjtvxvinkvpqsunnxl.supabase.co";
+var SUPABASE_KEY="sb_publishable_tPyxbEc2uSOP3TrCqRltTw_9DX3cKAB";
+var sb=null, user=null, consent=null; // consent: null(설정 없음) / true / false
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+var VLABEL={likely_synthetic:"합성 가능성 높음",uncertain:"판단 어려움",likely_human:"사람 음성에 가까움"};
+
+function explain(e){
+  var code=(e&&(e.code||e.error_code))||"", msg=(e&&e.message)||String(e), all=code+" "+msg, hint="";
+  if(/anonymous/i.test(all)) hint="Supabase → Authentication → Sign In / Providers에서 Anonymous sign-ins를 켜세요.";
+  else if(/captcha/i.test(all)) hint="CAPTCHA 보호가 켜져 있습니다. 이 앱에는 CAPTCHA 입력칸이 없으니 시연 중에는 꺼 주세요.";
+  else if(code==="42P01"||/does not exist|schema cache/i.test(msg)) hint="SQL Editor에서 테이블 생성 SQL을 먼저 실행했는지 확인하세요.";
+  else if(code==="42501"||/row-level security|permission denied/i.test(msg)) hint="권한이 없습니다. 저장 허용이 켜져 있는지, SQL의 RLS 정책과 GRANT가 만들어졌는지 확인하세요.";
+  else if(/record limit/i.test(msg)) hint="저장 가능한 기록 수(100개)를 넘었습니다. 기록을 삭제해 주세요.";
+  else if(/Failed to fetch|NetworkError/i.test(msg)) hint="인터넷 연결과 Supabase 주소를 확인하세요.";
+  return {title:(code||(e&&e.name)||"ERROR"), text:msg+(hint?" → "+hint:"")};
+}
+async function ensureUser(create){
+  if(!sb) throw err("SUPABASE_NOT_LOADED","Supabase 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
+  var r=await sb.auth.getSession(), ses=r.data&&r.data.session;
+  if(ses){ user=ses.user; return user; }
+  if(!create) return null;
+  var a=await sb.auth.signInAnonymously();
+  if(a.error) throw a.error;
+  user=a.data.user; return user;
+}
+async function saveConsent(val){
+  var u=await ensureUser(val); // 저장을 켤 때만 익명 계정을 만듭니다
+  if(!u) return;
+  var r=await sb.from("user_settings").upsert({user_id:u.id,save_consent:val,consented_at:val?new Date().toISOString():null},{onConflict:"user_id"});
+  if(r.error) throw r.error;
+  consent=val;
+}
+async function loadSaved(){
+  var box=$("saved-box"), msg=$("saved-msg"), ul=$("history");
+  msg.textContent=""; ul.textContent="";
+  if(!sb){ box.hidden=true; return; }
+  try{
+    var u=await ensureUser(false);
+    if(!u){ box.hidden=true; consent=null; $("allowSave").checked=false; return; }
+    var st=await sb.from("user_settings").select("save_consent").eq("user_id",u.id).maybeSingle();
+    if(st.error) throw st.error;
+    consent=st.data?st.data.save_consent:null;
+    $("allowSave").checked=(consent===true);
+    var r=await sb.from("analysis_records").select("id,created_at,spoof_percent,verdict").eq("user_id",u.id).order("created_at",{ascending:false}).limit(20);
+    if(r.error) throw r.error;
+    $("saved-status").textContent="저장 허용: "+(consent===true?"켜짐":"꺼짐");
+    $("btn-toggle").textContent=consent===true?"저장 허용 끄기":"저장 허용 켜기";
+    $("saved-empty").hidden=r.data.length>0;
+    r.data.forEach(function(rec){
+      var li=document.createElement("li"); li.className="rec";
+      var t=document.createElement("span");
+      t.textContent=new Date(rec.created_at).toLocaleString("ko-KR")+" · 합성 가능성 "+rec.spoof_percent+"% · "+(VLABEL[rec.verdict]||"");
+      var b=document.createElement("button"); b.className="sub"; b.textContent="삭제"; b.setAttribute("aria-label","이 기록 삭제");
+      b.onclick=function(){ delRecords(rec.id); };
+      li.appendChild(t); li.appendChild(b); ul.appendChild(li);
+    });
+    box.hidden=false;
+  }catch(e){
+    var x=explain(e); $("saved-status").textContent="저장 데이터를 불러오지 못했습니다."; msg.textContent="["+x.title+"] "+x.text; box.hidden=false;
+  }
+}
+async function delRecords(id){
+  var msg=$("saved-msg"); msg.textContent="";
+  try{
+    var u=await ensureUser(false); if(!u) return;
+    var q=sb.from("analysis_records").delete().eq("user_id",u.id); if(id) q=q.eq("id",id);
+    var r=await q; if(r.error) throw r.error;
+    await loadSaved();
+  }catch(e){ var x=explain(e); msg.textContent="삭제하지 못했습니다. ["+x.title+"] "+x.text; }
+}
+
+/* ---- Space 호출 ---- */
+function err(code,msg){ var e=new Error(msg); e.code=code; e.isApp=true; return e; }
+function stopIf(id){ if(id!==runId){ var e=new Error("cancelled"); e.name="AbortError"; throw e; } }
+
+/* FormData 대신 직접 만든 multipart 본문 사용 (미리보기 화면 등에서도 작동하도록) */
+async function uploadBody(file){
+  var boundary="----vc"+Math.random().toString(16).slice(2);
+  var enc=new TextEncoder();
+  var name=file.name.replace(/[^\w.\-]/g,"_");
+  var head=enc.encode("--"+boundary+"\r\nContent-Disposition: form-data; name=\"files\"; filename=\""+name+"\"\r\nContent-Type: "+(file.type||"application/octet-stream")+"\r\n\r\n");
+  var tail=enc.encode("\r\n--"+boundary+"--\r\n");
+  var data=new Uint8Array(await file.arrayBuffer());
+  var body=new Uint8Array(head.length+data.length+tail.length);
+  body.set(head,0); body.set(data,head.length); body.set(tail,head.length+data.length);
+  return {body:body, type:"multipart/form-data; boundary="+boundary};
+}
+
+async function callSpace(file, myId){
+  var prefix=null, path=null;
+  for(const p of ["/gradio_api",""]){
+    lastStep="1/3 파일 올리기"; var mp=await uploadBody(file);
+    var r=await fetch(SPACE+p+"/upload",{method:"POST",body:mp.body,headers:{"Content-Type":mp.type}});
+    stopIf(myId);
+    if(r.status===404) continue;
+    if(!r.ok) throw err("SERVER_BUSY","분석 서버가 응답하지 않습니다. 서버가 잠들어 있거나 사용 한도에 걸렸을 수 있습니다. (HTTP "+r.status+")");
+    path=(await r.json())[0]; prefix=p; break;
+  }
+  if(prefix===null) throw err("SERVER_NOT_FOUND","분석 서버를 찾을 수 없습니다.");
+  lastStep="2/3 분석 요청"; var c=await fetch(SPACE+prefix+"/call/analyze_audio",{method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({data:[{path:path,meta:{_type:"gradio.FileData"}}]})});
+  if(!c.ok) throw err("API_CALL_FAILED","분석 요청이 거절되었습니다. (HTTP "+c.status+")");
+  stopIf(myId);
+  var id=(await c.json()).event_id;
+  lastStep="3/3 결과 받기"; var res=await fetch(SPACE+prefix+"/call/analyze_audio/"+id);
+  var text=await res.text(); stopIf(myId);
+  var lines=text.split("\n");
+  var ev=(lines.filter(function(l){return l.indexOf("event:")===0})[0]||"").slice(6).trim();
+  var dl=(lines.filter(function(l){return l.indexOf("data:")===0})[0]||"").slice(5).trim();
+  if(ev!=="complete"){ throw err("MODEL_ERROR","모델이 분석에 실패했습니다. "+(dl&&dl!=="null"?dl:"")); }
+  return JSON.parse(dl)[0];
+}
+
+function parseScores(out){
+  var spoof,real,j=null;
+  try{ j=JSON.parse(out) }catch(e){}
+  if(j && typeof j==="object"){
+    if(j.ok===false) throw err("MODEL_ERROR", j.error||"모델 오류");
+    spoof=Number(j.spoof_score); real=Number(j.real_score);
+  } else {
+    out=String(out);
+    if(out.indexOf("분석 중 오류")===0) throw err("MODEL_ERROR", out.replace("분석 중 오류가 발생했습니다:","").trim()||"모델 오류");
+    var a=out.match(/합성 음성 쪽 원시 점수:\s*(-?[\d.]+)/), b=out.match(/사람 음성 쪽 원시 점수:\s*(-?[\d.]+)/);
+    if(a&&b){ spoof=parseFloat(a[1]); real=parseFloat(b[1]); }
+  }
+  if(!isFinite(spoof)||!isFinite(real)) throw err("UNCLEAR_RESULT","결과가 불분명해 판별할 수 없습니다.");
+  return {spoof:spoof, real:real};
+}
+
+/* ---- 화면 동작 ---- */
+function showError(name,msg){ clearInterval(timer); $("e-name").textContent=name; $("e-msg").textContent=msg; show("error"); }
+
+function validate(f){
+  if(!f) return ["NO_INPUT","파일을 선택하지 않았습니다. 음성 파일을 먼저 선택해 주세요."];
+  if(f.size===0) return ["EMPTY_FILE","빈 파일입니다. 다른 파일을 선택해 주세요."];
+  if(f.size>MAX_MB*1024*1024) return ["FILE_TOO_LARGE","파일이 "+MAX_MB+"MB보다 큽니다. 더 작은 파일을 올려 주세요."];
+  var ok=/\.(wav|mp3|m4a|flac|ogg)$/i.test(f.name)||/^audio\//.test(f.type);
+  if(!ok) return ["UNSUPPORTED_TYPE","지원하지 않는 형식입니다. wav, mp3, m4a, flac, ogg 파일을 올려 주세요."];
+  return null;
+}
+
+/* ---- 이 기기에서 하는 분석 (AI 아님): 파형·스펙트로그램 ---- */
+async function localAnalyze(file){
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) throw new Error("이 브라우저는 소리 읽기를 지원하지 않습니다.");
+  var ab=await file.arrayBuffer(), ctx=new AC(), buf;
+  try{
+    buf=await new Promise(function(res,rej){ var p=ctx.decodeAudioData(ab,res,rej); if(p&&p.catch) p.catch(rej); });
+  } finally { if(ctx.close) ctx.close(); }
+  var ch=buf.getChannelData(0), sr=buf.sampleRate, n=Math.min(ch.length,Math.floor(12*sr)), peak=0, i, v;
+  for(i=0;i<ch.length;i++){ v=Math.abs(ch[i]); if(v>peak) peak=v; }
+  return {x:ch.subarray(0,n), sr:sr, dur:buf.duration, channels:buf.numberOfChannels, peak:peak, shown:n/sr};
+}
+function fft(re,im){
+  var n=re.length,i,j=0,bit,t,len,k;
+  for(i=1;i<n;i++){ bit=n>>1; for(;j&bit;bit>>=1) j^=bit; j^=bit;
+    if(i<j){ t=re[i];re[i]=re[j];re[j]=t; t=im[i];im[i]=im[j];im[j]=t; } }
+  for(len=2;len<=n;len<<=1){
+    var ang=-2*Math.PI/len, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(i=0;i<n;i+=len){ var cr=1,ci=0;
+      for(k=0;k<len/2;k++){
+        var a=i+k,b=a+len/2, xr=re[b]*cr-im[b]*ci, xi=re[b]*ci+im[b]*cr;
+        re[b]=re[a]-xr; im[b]=im[a]-xi; re[a]+=xr; im[a]+=xi;
+        var nc=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=nc;
+      } } }
+}
+var PAL=[[2,8,7],[6,70,50],[25,245,166],[255,255,255]];
+function heat(v){ var t=v*(PAL.length-1), i=Math.min(PAL.length-2,Math.floor(t)), f=t-i;
+  return PAL[i].map(function(a,k){return Math.round(a+(PAL[i+1][k]-a)*f)}); }
+function drawWave(canvas,x,peak){
+  var W=720,H=140,g=canvas.getContext("2d"),px,j;
+  canvas.width=W; canvas.height=H;
+  g.fillStyle="#020605"; g.fillRect(0,0,W,H); g.fillStyle="#19f5a6";
+  var sc=0.95/Math.max(peak,1e-4), step=Math.max(1,Math.floor(x.length/W));
+  g.fillRect(0,H/2,W,1);
+  for(px=0;px<W;px++){
+    var mn=1,mx=-1;
+    for(j=0;j<step;j++){ var v=(x[px*step+j]||0)*sc; if(v<mn)mn=v; if(v>mx)mx=v; }
+    if(mn>mx) continue;
+    var y1=(1-Math.min(1,mx))*H/2, y2=(1-Math.max(-1,mn))*H/2;
+    g.fillRect(px,y1,1,Math.max(1,y2-y1));
+  }
+}
+function drawSpec(canvas,x,sr,peak){
+  var N=1024,cols=360,maxHz=Math.min(8000,sr/2),rows=Math.max(2,Math.floor(maxHz/(sr/N)));
+  canvas.width=cols; canvas.height=rows;
+  var g=canvas.getContext("2d"), img=g.createImageData(cols,rows);
+  var win=new Float64Array(N),re=new Float64Array(N),im=new Float64Array(N),i,c,r;
+  for(i=0;i<N;i++) win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));
+  var hop=Math.max(1,Math.floor((x.length-N)/cols)), last=Math.max(0,x.length-N), all=[], mx=-1e9;
+  for(c=0;c<cols;c++){
+    var st=Math.min(c*hop,last);
+    for(i=0;i<N;i++){ re[i]=(x[st+i]||0)*win[i]; im[i]=0; }
+    fft(re,im);
+    var col=new Float32Array(rows);
+    for(r=0;r<rows;r++){ var d=20*Math.log10(Math.sqrt(re[r]*re[r]+im[r]*im[r])+1e-9); col[r]=d; if(d>mx)mx=d; }
+    all.push(col);
+  }
+  var RANGE=70, silent=(peak<1e-4);
+  for(c=0;c<cols;c++) for(r=0;r<rows;r++){
+    var v=silent?0:Math.max(0,Math.min(1,(all[c][r]-(mx-RANGE))/RANGE)), k=heat(v), o=((rows-1-r)*cols+c)*4;
+    img.data[o]=k[0]; img.data[o+1]=k[1]; img.data[o+2]=k[2]; img.data[o+3]=255;
+  }
+  g.putImageData(img,0,0);
+  return maxHz;
+}
+
+function withTimeout(p,ms){
+  p.catch(function(){});
+  return new Promise(function(res,rej){
+    var t=setTimeout(function(){ rej(err("TIMEOUT","서버가 "+Math.round(ms/1000)+"초 안에 응답하지 않았습니다. 서버가 시작 중일 수 있습니다.")); },ms);
+    p.then(function(v){clearTimeout(t);res(v)},function(e){clearTimeout(t);rej(e)});
+  });
+}
+
+async function analyze(){
+  var f=$("file").files[0], bad=validate(f);
+  if(bad){ showError(bad[0],bad[1]); return; }
+  stack=["home","notice","upload"]; show("loading");
+  var p=0; $("bar-i").style.width="0%"; $("pct").textContent="0% (예상 진행률)";
+  clearInterval(timer);
+  timer=setInterval(function(){ p+=(95-p)*0.04; var v=Math.round(p);
+    $("bar-i").style.width=v+"%"; $("bar").setAttribute("aria-valuenow",v); $("pct").textContent=v+"% (예상 진행률)"; },500);
+  var myId=++runId, local=null, ai=null, aiErr=null;
+  try{ local=await localAnalyze(f); }catch(e){ local=null; }
+  if(myId!==runId) return;
+  try{
+    var out=await withTimeout(callSpace(f,myId),120000);
+    stopIf(myId);
+    ai=parseScores(out);
+  }catch(e){
+    if(e.name==="AbortError"||myId!==runId) return;
+    aiErr = e.isApp ? {name:e.code,msg:e.message+" [진행 단계: "+lastStep+"]"}
+      : {name:e.name||"NETWORK_ERROR", msg:"분석 서버에 연결하지 못했습니다. 인터넷 연결을 확인해 주세요. 서버가 꺼져 있거나 시작 중일 수 있고, 미리보기 화면에서는 외부 접속이 막힐 수 있습니다. 내려받은 파일을 브라우저에서 직접 열어 보세요. [진행 단계: "+(lastStep||"시작 전")+"] ("+e.message+")"};
+  }
+  clearInterval(timer);
+  if(!ai && !local){ showError(aiErr.name, aiErr.msg+" 또한 이 기기에서 파일을 읽지 못했습니다. wav나 mp3 파일로 다시 시도해 주세요."); return; }
+  showResult(f.name,ai,aiErr,local);
+}
+
+function li(ul,t){ var x=document.createElement("li"); x.textContent=t; ul.appendChild(x); }
+
+function showResult(name,ai,aiErr,local){
+  var pct=null, ul=$("r-reasons"); ul.textContent="";
+  if(local){
+    li(ul,"길이 "+local.dur.toFixed(1)+"초 · 샘플레이트 "+local.sr+"Hz · 채널 "+local.channels+"개");
+    li(ul, local.peak>0 ? "최대 음량 "+(20*Math.log10(local.peak)).toFixed(1)+" dB"+(local.peak<0.01?" (매우 작은 소리입니다)":"") : "소리가 거의 없는 파일입니다(무음).");
+    if(local.dur<1) li(ul,"1초보다 짧아 AI 모델이 분석하기 어렵습니다.");
+  } else li(ul,"이 브라우저에서는 파일의 소리를 읽지 못해 그래프와 소리 정보를 표시할 수 없습니다.");
+  if(ai){
+    pct=Math.round(1000/(1+Math.exp(ai.real-ai.spoof)))/10;
+    var label = pct>=70 ? "합성 음성일 가능성이 높게 나왔습니다" : pct>=40 ? "판단하기 어렵습니다 (사람/합성 어느 쪽도 뚜렷하지 않음)" : "사람 음성에 더 가깝게 나왔습니다";
+    $("r-pct").textContent=pct+"%"; $("r-label").textContent=label;
+    $("r-ainote").textContent="이 숫자는 모델 점수를 바꾼 추정치이며 실제 확률이나 정확도가 아닙니다.";
+    $("btn-retry-ai").hidden=true;
+    li(ul,"AI 모델 점수 — 사람 음성 쪽: "+ai.real.toFixed(2)+" / 합성 음성 쪽: "+ai.spoof.toFixed(2));
+    li(ul, pct>=50 ? "합성 쪽 점수가 사람 쪽보다 높아 합성 가능성이 높게 계산되었습니다." : "사람 쪽 점수가 합성 쪽보다 높거나 비슷해 합성 가능성이 낮게 계산되었습니다.");
+    li(ul,"이 모델은 판단 근거를 문장으로 설명해 주지 않습니다. 위 점수가 근거의 전부입니다.");
+    li(ul,"이 모델은 영어 음성으로 학습되어 한국어 음성에서는 결과를 믿기 어렵습니다.");
+    li(ul,"파일의 앞부분 약 4초만 분석했습니다. 짧거나 잡음이 많으면 결과가 흔들릴 수 있습니다.");
+  } else {
+    $("r-pct").textContent="판별 불가"; $("r-label").textContent="AI 분석을 하지 못했습니다 (오류 이름: "+aiErr.name+")";
+    $("r-ainote").textContent=aiErr.msg; $("btn-retry-ai").hidden=false;
+  }
+  /* 그래프 (AI 없이도 표시) */
+  var gb=$("r-graphs");
+  if(local){
+    gb.hidden=false;
+    drawWave($("c-wave"),local.x,local.peak);
+    var hz=drawSpec($("c-spec"),local.x,local.sr,local.peak);
+    $("g-hz").textContent="0~"+(hz/1000)+"kHz";
+    var show4=local.shown>4.1, left=(4.04/local.shown*100)+"%";
+    ["mk1","mk2"].forEach(function(id){ var m=$(id); m.hidden=!show4; m.style.left=left; });
+    $("g-mark").hidden=!show4;
+  } else gb.hidden=true;
+  /* 보이스피싱 대처 방법 (AI 없이도 표시) */
+  var g=$("r-guide-list"); g.textContent="";
+  var strong = (pct===null || pct>=40);
+  if(pct===null) li(g,"AI 점수는 없지만, 의심되는 전화나 음성이라면 아래 방법을 따르세요.");
+  (strong ? [
+    "돈을 보내거나 개인정보를 알려 주지 말고 먼저 전화를 끊으세요.",
+    "가족·지인의 원래 번호로 직접 다시 전화해 확인하세요.",
+    "가족끼리 정해 둔 확인 질문이나 암호를 물어보세요.",
+    "피해가 의심되면 경찰 112, 금융감독원 1332에 상담하세요."
+  ] : [
+    "낮은 수치도 안전하다는 뜻이 아닙니다. 돈이나 개인정보를 요구하면 반드시 직접 다시 확인하세요.",
+    "의심스러우면 경찰 112, 금융감독원 1332에 상담하세요."
+  ]).forEach(function(t){ li(g,t); });
+  lastRecord = ai ? {pct:pct,real:ai.real,spoof:ai.spoof,dur:(local&&local.dur<=3600)?Math.round(local.dur*10)/10:null} : null;
+  $("btn-save").disabled=false;
+  $("save-box").hidden=!(allowSave && ai); $("save-msg").textContent="";
+  show("result");
+}
+
+/* ---- 이벤트 ---- */
+$("btn-start").onclick=function(){ stack=["home"]; show("notice",true); };
+$("btn-start2").onclick=$("btn-start").onclick;
+$("agree").onchange=function(){ $("btn-agree").disabled=!$("agree").checked; };
+$("btn-agree").onclick=async function(){
+  var want=$("allowSave").checked, btn=this, old=btn.textContent, msg=$("notice-msg");
+  msg.textContent=""; $("btn-skipsave").hidden=true; btn.disabled=true; btn.textContent="저장 설정 중…";
+  try{
+    if(want && consent!==true) await saveConsent(true);
+    if(!want && consent===true) await saveConsent(false);
+    allowSave=want; show("upload",true);
+  }catch(e){
+    var x=explain(e); msg.textContent="저장 설정을 하지 못했습니다. ["+x.title+"] "+x.text; $("btn-skipsave").hidden=false;
+  }finally{ btn.textContent=old; btn.disabled=!$("agree").checked; }
+};
+$("btn-skipsave").onclick=function(){ allowSave=false; $("allowSave").checked=false; $("notice-msg").textContent=""; this.hidden=true; show("upload",true); };
+document.querySelectorAll("[data-back]").forEach(function(b){b.onclick=back});
+$("file").onchange=function(){
+  var f=$("file").files[0];
+  $("file-info").textContent = f ? "선택한 파일: "+f.name+" ("+(f.size/1024/1024).toFixed(2)+"MB)" : "선택된 파일이 없습니다.";
+};
+$("btn-analyze").onclick=analyze;
+$("btn-retry-ai").onclick=analyze;
+$("btn-cancel").onclick=function(){ runId++; clearInterval(timer); goHome(); };
+$("btn-retry").onclick=function(){ $("file").value=""; $("file-info").textContent="선택된 파일이 없습니다."; stack=["home","notice","upload"]; show("upload"); };
+$("btn-again").onclick=function(){ $("file").value=""; $("file-info").textContent="선택된 파일이 없습니다."; stack=["home","notice","upload"]; show("upload"); };
+$("btn-save").onclick=async function(){
+  var btn=this, rec=lastRecord, msg=$("save-msg");
+  if(!rec) return;
+  btn.disabled=true; msg.textContent="저장 중…";
+  try{
+    var u=await ensureUser(false);
+    if(!u) throw err("NO_SESSION","로그인 정보가 없습니다. 홈에서 다시 시작해 저장 허용을 켜 주세요.");
+    var verdict=rec.pct>=70?"likely_synthetic":(rec.pct>=40?"uncertain":"likely_human");
+    var r=await sb.from("analysis_records").insert({user_id:u.id,spoof_percent:rec.pct,verdict:verdict,real_score:rec.real,spoof_score:rec.spoof,audio_seconds:rec.dur,model_name:"AASIST-L"});
+    if(r.error) throw r.error;
+    $("save-box").hidden=true; msg.textContent="저장했습니다. (결과 숫자만 저장되었고 음성 파일은 저장되지 않았습니다.)";
+  }catch(e){
+    var x=explain(e); msg.textContent="저장하지 못했습니다. 기록은 저장되지 않았어요. ["+x.title+"] "+x.text; btn.disabled=false;
+  }
+};
+$("btn-nosave").onclick=function(){ $("save-box").hidden=true; $("save-msg").textContent="저장하지 않았습니다."; };
+$("btn-toggle").onclick=async function(){
+  var msg=$("saved-msg"); msg.textContent="";
+  try{ await saveConsent(consent!==true); await loadSaved(); }
+  catch(e){ var x=explain(e); msg.textContent="설정을 바꾸지 못했습니다. ["+x.title+"] "+x.text; }
+};
+$("btn-clear").onclick=function(){ if(window.confirm("저장한 기록을 모두 삭제할까요? 되돌릴 수 없습니다.")) delRecords(null); };
+
+loadSaved();
+})();
+</script>
+</body>
+</html>
